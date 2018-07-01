@@ -11,7 +11,7 @@
 <?rfc compact="yes" ?>
 <?rfc subcompact="yes" ?>
 <rfc category="info"
-     docName="draft-ietf-dmm-distributed-mobility-anchoring-08"
+     docName="draft-ietf-dmm-distributed-mobility-anchoring-09"
      ipr="trust200902">
 <front>
 <title abbrev="distributed mobility anchoring">Distributed Mobility
@@ -85,7 +85,7 @@
   </address>
 </author>
 
-<date year="2018" month="May" />
+<date year="2018" month="July" />
 <area/>
 
 <workgroup>DMM</workgroup>
@@ -148,15 +148,21 @@ IPv6 prefix anchored to the router may be assigned to the link for exclusive use
 by the MN <xref target="RFC6459"/>. The MN may then configure a global IPv6
 address from this prefix and use it as the source IP address in a flow to
 communicate with its correspondent node (CN). When there are multiple mobility
-anchors, an address selection for a given flow is first required before the flow
-is initiated. Using an anchor in an MN's network of attachment has the advantage
-that the packets can simply be forwarded according to the forwarding table.
-However, after the flow has been initiated, the MN may later move to another
-network, so that the IP address no longer belongs to the current network of
-attachment of the MN.
+anchors assigned to the same MN, an address selection for a given flow is first
+required before the flow is initiated. Using an anchor in an MN's network of
+attachment has the advantage that the packets can simply be forwarded according
+to the forwarding table. However, after the flow has been initiated, the MN may
+later move to another network which assigns a new mobility anchor to the MN.
+Since the new anchor is located in a different network, the MN's assigned prefix
+and the built MN IP address does not belong to the network where the MN is
+currently attached.
 </t>
 
 <t>
+When the MN wants to continue using its assigned prefix and IP address, e.g., to
+complete ongoing data sessions after it moved to a new network, the network
+needs to provide support for IP address- and session continuity, since routing
+packets to the MN through the new network deviates from applying default routes.
 The IP session continuity needs of a flow (application) determines the how the
 IP address used by the traffic of this flow has to be anchored. If the ongoing
 IP flow can cope with an IP prefix/address change, the flow can be reinitiated
@@ -188,7 +194,7 @@ local mobility anchor (LMA), and mobile access gateway (MAG).
 <t>In addition, this document uses the following terms:</t>
 
 <t><list style="hanging">
-<t hangText="Home network of an application session or a home address:">
+<t hangText="Home network of a home address:">
 the network that has assigned the HoA 
 used as the session identifier by the application running in an MN. 
 The MN may be running multiple application sessions, 
@@ -196,21 +202,21 @@ and each of these sessions can have a different home network.
 <vspace blankLines="1"/>
 </t>
 
-<t hangText="Anchoring (an IP prefix/address):">
-An IP prefix, i.e., Home Network Prefix (HNP), 
-or address, i.e., HoA,
-assigned for use by an MN is topologically anchored to an anchor node 
-when the anchor node is able to advertise a connected route 
-into the routing infrastructure for the assigned IP prefix. 
+<t hangText="Anchor (of an IP prefix/address):">
+An IP prefix, i.e., Home Network Prefix (HNP), or address, i.e., HoA, assigned
+for use by an MN is topologically anchored to an anchor node when the anchor
+node is able to advertise a connected route into the routing infrastructure for
+the assigned IP prefix. The traffic using the assigned IP address/prefix must
+traverse the anchor node. We can refer to the function performed by IP anchor
+node as anchoring, which is a data plane function.
 <vspace blankLines="1"/>
 </t>
 
 <t hangText="Location Management (LM) function:">
-that keeps and manages the network location information of an MN.
-The location information may be a binding 
-of the advertised IP address/prefix, e.g., HoA or HNP, 
-to the IP routing address of the MN or of a node 
-that can forward packets destined to the MN. 
+control plane function that keeps and manages the network location information
+of an MN. The location information may be a binding of the advertised IP
+address/prefix, e.g., HoA or HNP, to the IP routing address of the MN or of a
+node that can forward packets destined to the MN. 
 <vspace blankLines="1"/> 
 
 When the MN is a mobile router (MR)
@@ -227,7 +233,7 @@ location query and update messages may be exchanged
 between a Location Management client (LMc) 
 and a Location Management server (LMs), 
 where
-the location information can be updated to or queried from the LMs.
+the location information can be updated to or queried from the LMc.
 
 Optionally, there may be a Location Management proxy (LMp)
 between LMc and LMs.
@@ -269,7 +275,7 @@ control plane anchor or mobility controller.
 </list></t>
 
 </section>
-<!-- Conventions and terminoloty (end section) -->
+<!-- Conventions and terminology (end section) -->
 
 <!-- distributed mobility anchoring (begin section) -->
 <section anchor="sec:distributed-anchoring"
@@ -330,8 +336,9 @@ shown in the figure).
 <t>
 The location management (LM) function may be co-located or split (as shown in
 the figure) into a separate server (LMs) and a client (LMc). In this case, the
-LMs may be centralized whereas the LMc may be distributed or centralized,
-according to whether the CPA is distributed or centralized.
+LMs may be centralized whereas the LMc may be distributed or centralized.
+<!-- Deleted (due to Marco's comment) -->
+<!-- ,according to whether the CPA is distributed or centralized. -->
 </t>
 
 </list>
@@ -430,10 +437,11 @@ by default.
 </t>
 
 <t>
-A straightforward choice of mobility anchoring is for a flow to use the IP
-prefix of the network to which the MN is attached when the flow is initiated
-<xref target="I-D.seite-dmm-dma"/> <xref
-target="I-D.bernardos-dmm-pmipv6-dlif"/>. 
+A straightforward choice of mobility anchoring is the following: the MN's choses
+as source IP address of packets belonging to an IP flow, an address allocated by
+the network the MN is attached to when the flow was initiated. As such, traffic
+belonging to this flow traverses the MN's mobility anchor <xref
+target="I-D.seite-dmm-dma"/> <xref target="I-D.bernardos-dmm-pmipv6-dlif"/>. 
 </t>
 
 <t>
@@ -558,10 +566,19 @@ IP2 address configuration             |                             |
 
 <t>
 When IP mobility is needed for a flow, the LM and FM functions in <xref
-target="sec:distributed-anchoring-configurations"/> are utilized. The mobility
-support may be provided by IP prefix anchor switching to the new network to be
-described in <xref target="sec:switching-anchor"/> or by using other mobility
-management methods (<xref target="Paper-Distributed.Mobility"/>, <xref
+target="sec:distributed-anchoring-configurations"/> are utilized. There are two
+possible cases: (i) the initial anchor remains the anchor and forwards traffic
+to a new locator in the new network, and (ii) the mobility anchor (data plane
+function) is changed but binds the MN's transferred IP address/prefix. The
+latter enable optimized routes but requires some data plane node that enforces
+rules for traffic indirection.
+</t>
+
+<t>
+The first case identified above (mobility support provided by IP prefix anchor
+switching to the new network) can be performed as described in <xref
+target="sec:switching-anchor"/> or by using other mobility management methods
+(<xref target="Paper-Distributed.Mobility"/>, <xref
 target="Paper-Distributed.Mobility.PMIP"/> and <xref
 target="Paper-Distributed.Mobility.Review"/>). Then the flow may continue to use
 the IP prefix from the prior network of attachment. Yet some time later, the
@@ -577,7 +594,11 @@ network.
 
 <t>
 An example call flow in this case is outlined in <xref
-target="fig:flow-continuity" />.
+target="fig:flow-continuity" />. In this example, the AR1 plays the role of
+FM-DP entity and redirects the traffic (e.g., using an IP tunnel) to AR2.
+Another solution could be to place an FM-DP entity closer to the CN network to
+perform traffic steering to deviate from default routes (which will bring the
+packet to AR1 per default routing).
 </t>
 
 <figure anchor="fig:flow-continuity" title="A flow continues to use the IP prefix from its home network after MN has moved to a new network">
@@ -601,7 +622,9 @@ IP1 address configuration             |                             |
 IP mobility support such as that described in next sub-section
   |<--------------RA(IP2,IP1)---------|                             |
   |                     |             |                             |
-  |<-Flow(IP1,IPcn,...)---------------+---------------------------->|
+  |                     +<-Flow(IP1,IPcn,...)---------------------->|
+  |                     +<===========>+                             |
+  |<-Flow(IP1,IPcn,...)-------------->+                             |
   |                     |             |                             |
 Assigned prefix IP2     |             |                             |
 IP2 address configuration             |                             |

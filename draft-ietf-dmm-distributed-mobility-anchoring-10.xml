@@ -1,0 +1,925 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+<!ENTITY rfc2119 PUBLIC "" "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
+]>
+<?xml-stylesheet type='text/xsl' href='rfc2629.xslt' ?>
+<?rfc toc="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc iprnotified="no"?>
+<?rfc strict="yes"?>
+<?rfc compact="yes" ?>
+<?rfc subcompact="yes" ?>
+<rfc category="info"
+     docName="draft-ietf-dmm-distributed-mobility-anchoring-10"
+     ipr="trust200902">
+<front>
+<title abbrev="distributed mobility anchoring">Distributed Mobility
+    Anchoring</title>
+
+<author fullname="H. Anthony Chan" initials="H" surname="Chan" role="editor">
+  <organization>Huawei Technologies</organization>
+  <address>
+    <postal>
+      <street>5340 Legacy Dr. Building 3</street>
+      <city>Plano, TX 75024</city>
+      <country>USA</country>
+    </postal>
+    <email>h.a.chan@ieee.org</email>
+  </address>
+</author>
+
+<author fullname="Xinpeng Wei" initials="X" surname="Wei">
+  <organization>Huawei Technologies</organization>
+  <address>
+    <postal>
+      <street>Xin-Xi Rd. No. 3, Haidian District</street>
+      <city>Beijing, 100095</city>
+      <country>P. R. China</country>
+    </postal>
+    <email>weixinpeng@huawei.com</email>
+  </address>
+</author>
+
+<author fullname="Jong-Hyouk Lee" initials="J" surname="Lee">
+  <organization>Sangmyung University</organization>
+  <address>
+    <postal>
+      <street>31, Sangmyeongdae-gil, Dongnam-gu</street>
+      <city>Cheonan 31066</city>
+      <country>Republic of Korea</country>
+    </postal>
+    <email>jonghyouk@smu.ac.kr</email>
+  </address>
+</author>
+
+<author fullname="Seil Jeon" initials="S" surname="Jeon">
+  <organization>Sungkyunkwan University</organization>
+  <address>
+    <postal>
+      <street>2066 Seobu-ro, Jangan-gu</street>
+      <city>Suwon, Gyeonggi-do</city>
+      <country>Republic of Korea</country>
+    </postal>
+    <email>seiljeon@skku.edu</email>
+  </address>
+</author>
+
+<author fullname="Carlos J. Bernardos"
+        initials="CJ."
+        surname="Bernardos"
+        role="editor">
+  <organization abbrev="UC3M">
+    Universidad Carlos III de Madrid
+  </organization>
+  <address>
+    <postal>
+      <street>Av. Universidad, 30</street>
+      <city>Leganes, Madrid</city>
+      <code>28911</code>
+      <country>Spain</country>
+    </postal>
+    <phone>+34 91624 6236</phone>
+    <email>cjbc@it.uc3m.es</email>
+    <uri>http://www.it.uc3m.es/cjbc/</uri>
+  </address>
+</author>
+
+<date year="2018" month="July" />
+<area/>
+
+<workgroup>DMM</workgroup>
+
+<abstract>
+<t>
+This document defines distributed mobility anchoring in terms of the different
+configurations and functions to provide IP mobility support. A network may be
+configured with distributed mobility anchoring functions for both network-based
+or host-based mobility support according to the needs of mobility support. In
+the distributed mobility anchoring environment, multiple anchors are available
+for mid-session switching of an IP prefix anchor. To start a new flow or to
+handle a flow not requiring IP session continuity as a mobile node moves to a
+new network, the flow can be started or re-started using a new IP address
+configured from the new IP prefix which is anchored to the new network. The
+mobility functions and their operations and parameters are general for different
+configurations.
+</t>
+</abstract>
+</front>
+
+<middle>
+
+<!-- Introduction -->
+
+<section anchor="intro" title="Introduction">
+<t>
+A key requirement in distributed mobility management <xref target="RFC7333"/> is
+to enable traffic to avoid traversing a single mobility anchor far from an
+optimal route. This document defines different configurations, functional
+operations and parameters for distributed mobility anchoring and explains how to
+use them to make the route changes to avoid unnecessarily long routes.
+</t>
+
+<t>
+Companion distributed mobility management documents are already addressing the
+architecture and deployment <xref target="I-D.ietf-dmm-deployment-models"/>,
+source address selection <xref target="I-D.ietf-dmm-ondemand-mobility"/>, and
+control-plane data-plane signaling <xref target="I-D.ietf-dmm-fpc-cpdp"/>. A
+number of distributed mobility solutions have also been proposed, for example,
+in <xref target="I-D.seite-dmm-dma"/>, <xref
+target="I-D.bernardos-dmm-pmipv6-dlif"/>, <xref
+target="I-D.sarikaya-dmm-for-wifi"/>, <xref
+target="I-D.yhkim-dmm-enhanced-anchoring"/>, and <xref
+target="I-D.matsushima-stateless-uplane-vepc"/>.
+</t>
+
+
+<t>
+Distributed mobility anchoring employs multiple anchors in the data plane. In
+general, control plane functions may be separated from data plane functions and
+be centralized but may also be co-located with the data plane functions at the
+distributed anchors. Different configurations of distributed mobility anchoring
+are described in <xref target="sec:distributed-anchoring-configurations"/>.
+</t>
+
+<t>
+As an MN attaches to an access router and establishes a link between them, a /64
+IPv6 prefix anchored to the router may be assigned to the link for exclusive use
+by the MN <xref target="RFC6459"/>. The MN may then configure a global IPv6
+address from this prefix and use it as the source IP address in a flow to
+communicate with its correspondent node (CN). When there are multiple mobility
+anchors assigned to the same MN, an address selection for a given flow is first
+required before the flow is initiated. Using an anchor in an MN's network of
+attachment has the advantage that the packets can simply be forwarded according
+to the forwarding table. However, after the flow has been initiated, the MN may
+later move to another network which assigns a new mobility anchor to the MN.
+Since the new anchor is located in a different network, the MN's assigned prefix
+and the built MN IP address does not belong to the network where the MN is
+currently attached.
+</t>
+
+<t>
+When the MN wants to continue using its assigned prefix and IP address, e.g., to
+complete ongoing data sessions after it moved to a new network, the network
+needs to provide support for IP address- and session continuity, since routing
+packets to the MN through the new network deviates from applying default routes.
+The IP session continuity needs of a flow (application) determines the how the
+IP address used by the traffic of this flow has to be anchored. If the ongoing
+IP flow can cope with an IP prefix/address change, the flow can be reinitiated
+with a new IP address anchored in the new network. On the other hand, if the
+ongoing IP flow cannot cope with such change, mobility support is needed. A
+network supporting a mix of flows both requiring and not requiring IP mobility
+support will need to distinguish these flows. 
+</t>
+
+</section>
+
+
+<!-- Conventions and terminoloty (begin section)-->
+<section anchor="sec:definitions"
+title="Conventions and Terminology">
+
+<t>
+All general mobility-related terms and their acronyms used in this document 
+are to be interpreted as defined in the Mobile IPv6 (MIPv6) 
+base specification <xref target="RFC6275"/>, 
+the Proxy Mobile IPv6 (PMIPv6) specification <xref target="RFC5213"/>,
+the "Mobility Related Terminologies" <xref target="RFC3753"/>,
+and the DMM current practices and gap analysis <xref target="RFC7429"/>.
+These include terms such as mobile node (MN), correspondent node (CN), 
+home agent (HA), home address (HoA), care-of-address (CoA), 
+local mobility anchor (LMA), and mobile access gateway (MAG).
+</t>
+
+<t>In addition, this document uses the following terms:</t>
+
+<t><list style="hanging">
+<t hangText="Home network of a home address:">
+the network that has assigned the HoA 
+used as the session identifier by the application running in an MN. 
+The MN may be running multiple application sessions, 
+and each of these sessions can have a different home network. 
+<vspace blankLines="1"/>
+</t>
+
+<t hangText="Anchor (of an IP prefix/address):">
+An IP prefix, i.e., Home Network Prefix (HNP), or address, i.e., HoA, assigned
+for use by an MN is topologically anchored to an anchor node when the anchor
+node is able to advertise a connected route into the routing infrastructure for
+the assigned IP prefix. The traffic using the assigned IP address/prefix must
+traverse the anchor node. We can refer to the function performed by IP anchor
+node as anchoring, which is a data plane function.
+<vspace blankLines="1"/>
+</t>
+
+<t hangText="Location Management (LM) function:">
+control plane function that keeps and manages the network location information
+of an MN. The location information may be a binding of the advertised IP
+address/prefix, e.g., HoA or HNP, to the IP routing address of the MN or of a
+node that can forward packets destined to the MN. 
+<vspace blankLines="1"/> 
+
+When the MN is a mobile router (MR)
+carrying a mobile network of mobile network nodes (MNN),
+the location information will also include 
+the mobile network prefix (MNP),
+which is the aggregate IP prefix
+delegated to the MR
+to assign IP prefixes for use by the MNNs in the mobile network.
+<vspace blankLines="1"/> 
+ 
+In a client-server protocol model, 
+location query and update messages may be exchanged
+between a Location Management client (LMc) 
+and a Location Management server (LMs), 
+where
+the location information can be updated to or queried from the LMc.
+
+Optionally, there may be a Location Management proxy (LMp)
+between LMc and LMs.
+<vspace blankLines="1"/> 
+
+With separation of control plane and data plane, 
+the LM function is in the control plane. 
+It may be a logical function at the control plane node, 
+control plane anchor, or mobility controller. 
+<vspace blankLines="1"/> 
+
+It may be distributed or centralized. 
+<vspace blankLines="1"/>
+</t>
+
+<t hangText="Forwarding Management (FM) function:">
+packet interception and forwarding to/from the IP address/prefix 
+assigned for use by the MN, based on the internetwork location information, 
+either to the destination or to some other network element 
+that knows how to forward the packets to their destination. 
+<vspace blankLines="1"/>
+
+This function may be used to achieve traffic indirection. 
+With separation of control plane and data plane, 
+the FM function may split into a FM function in the data plane (FM-DP) 
+and a FM function in the control plane (FM-CP).
+<vspace blankLines="1"/> 
+
+FM-DP may be distributed with distributed mobility management. 
+It may be a function in a data plane anchor or data plane node. 
+<vspace blankLines="1"/> 
+
+FM-CP may be distributed or centralized. 
+It may be a function in a control plane node,
+control plane anchor or mobility controller. 
+<vspace blankLines="1"/>
+</t>
+
+</list></t>
+
+</section>
+<!-- Conventions and terminology (end section) -->
+
+<!-- distributed mobility anchoring (begin section) -->
+<section anchor="sec:distributed-anchoring"
+          title="Distributed Mobility Anchoring">
+
+<!-- distributed anchoring configurations (begin section) -->
+<section anchor="sec:distributed-anchoring-configurations"
+ title="Configurations for Different Networks">
+
+<t>
+We next describe some configurations with multiple distributed anchors. To cover
+the widest possible spectrum of scenarios, we consider architectures in which
+the control and data planes are separated, as described in <xref
+target="I-D.ietf-dmm-deployment-models"/>.
+</t>
+
+
+<!-- distributed anchoring network based flat begin section) -->
+<section anchor="sec:distributed-anchoring-network-based"
+          title="Network-based DMM">
+
+<t>
+<xref target="fig:dmm_net-based" /> shows a general scenario for network-based
+distributed mobility management.
+</t>
+
+<t>
+The main characteristics of a network-based DMM solution are:
+</t>
+
+<t>
+
+<list style="symbols">
+
+<t>
+There are multiple data plane anchors (i.e., DPA instances), each with an FM-DP
+function.
+</t>
+
+<t>
+The control plane may either be distributed (not shown in the figure) or
+centralized (as shown in the figure).
+</t>
+
+<t>
+The control plane and the data plane (Control Plane Anchor -- CPA -- and Data
+Plane Anchor -- DPA) may be co-located or not. If the CPA is co-located with the
+distributed DPAs, then there are multiple co-located CPA-DPA instances (not
+shown in the figure).
+</t>
+
+<t>
+An IP prefix/address IP1 (anchored to the DPA with IP address IPa1) is assigned
+for use by an MN. The MN uses this IP1 address to communicate with CNs (not
+shown in the figure).
+</t>
+
+<t>
+The location management (LM) function may be co-located or split (as shown in
+the figure) into a separate server (LMs) and a client (LMc). In this case, the
+LMs may be centralized whereas the LMc may be distributed or centralized.
+<!-- Deleted (due to Marco's comment) -->
+<!-- ,according to whether the CPA is distributed or centralized. -->
+</t>
+
+</list>
+
+</t>
+
+<figure anchor="fig:dmm_net-based" title="Network-based DMM configuration">
+  <artwork><![CDATA[
+           ____________  Network
+       ___/            \___________
+      /      +-----+                \___
+     (       |LMs  |    Control         \
+    /        +-.---+    plane            \
+   /  +--------.---+    functions         \
+  (   |CPA:    .   |    in the             )
+  (   |FM-CP, LMc  |    network            )
+  (   +------------+                        \
+ /          . .                              \
+(           .     .                           )
+(           .         .                       )
+(           .             .                   \
+ \    +------------+ +------------+Distributed )
+  (   |DPA(IPa1):  | |DPA(IPa2):  |DPAs        )
+  (   |anchors IP1 | |anchors IP2 |          _/
+   \  |FM-DP       | |FM-DP       | etc.    /
+    \ +------------+ +------------+        /
+     \___                Data plane  _____/
+         \______         functions  /
+                \__________________/
+
+      +------------+ 
+      |MN(IP1)     | Mobile node attached
+      |flow(IP1,..)| to the network
+      +------------+
+  ]]></artwork>
+</figure>
+
+</section>
+<!-- distributed anchoring network based flat (end section) -->
+
+<!-- distributed anchoring host based (begin section) -->
+<section anchor="sec:distributed-anchoring-host-based"
+          title="Client-based DMM">
+
+<t>
+<xref target="fig:dmm_client-based" /> shows a general scenario for client-based
+distributed mobility management. In this configuration, the mobile node performs
+Control Plane Node (CPN) and Data Plane Node (DPN) mobility functions, namely
+the forwarding management and location management (client role) ones.
+</t>
+
+<figure anchor="fig:dmm_client-based" title="Client-based DMM configuration">
+  <artwork><![CDATA[
+       +-----+
+       |LMs  |
+       +-.---+
++--------.---+
+|CPA:    .   |
+|FM-CP, LMp  |
++------------+
+      . .
+      .     .
+      .         .
+      .             .
++------------+ +------------+ Distributed
+|DPA(IPa1):  | |DPA(IPa2):  | DPAs
+|anchors IP1 | |anchors IP2 |
+|FM-DP       | |FM-DP       |  etc.
++------------+ +------------+         
+
++------------+                        
+|MN(IP1)     |Mobile node             
+|flow(IP1,..)|using IP1               
+|FM,    LMc  |anchored to             
++------------+DPA(IPa1)               
+  ]]></artwork>
+</figure>
+
+</section>
+<!-- distributed anchoring host based (end section) -->
+
+</section>
+<!-- distributed anchoring configuratitons (end section) -->
+
+<!-- distributed mobility anchoring (end section) -->
+</section>
+
+<!-- IP mobility support only when needed (begin section) -->
+<section anchor="sec:on-demand"
+ title="IP Mobility Handling in Distributed Anchoring Environments
+- Mobility Support Only When Needed">
+
+<t>
+IP mobility support may be provided only when needed instead of being provided
+by default. Three cases can be considered:
+
+<list style="symbols"> 
+
+<t>
+Nomadic case: no address continuity is required. The IP address used by the MN
+changes after movement and traffic using old address is disrupted. If session
+continuity is required, then it needs to be provided by a solution running at L4
+or above.
+</t>
+
+<t>
+Mobility case, traffic redirection: address continuity is required. When the MN
+moves, the previous anchor still anchors traffic using the old IP address, and
+forwards it to the new MN's location. The MN obtains a new IP address anchored
+at the new location, and preferably uses it for new communications, established
+while connected at the new location.
+</t>
+
+<t>
+Mobility case, anchor relocation: address continuity is required. In this case
+the route followed by the traffic is optimized, by using some means for traffic
+indirection to deviate from default routes.
+</t>
+
+</list>
+
+</t>
+
+<t>
+A straightforward choice of mobility anchoring is the following: the MN's choses
+as source IP address of packets belonging to an IP flow, an address allocated by
+the network the MN is attached to when the flow was initiated. As such, traffic
+belonging to this flow traverses the MN's mobility anchor <xref
+target="I-D.seite-dmm-dma"/> <xref target="I-D.bernardos-dmm-pmipv6-dlif"/>. 
+</t>
+
+<t>
+The IP prefix/address at the MN's side of a flow may be anchored at the access
+router to which the MN is attached. For example, when an MN attaches to a
+network (Net1) or moves to a new network (Net2), an IP prefix from the attached
+network is assigned to the MN's interface. In addition to configuring new
+link-local addresses, the MN configures from this prefix an IP address which is
+typically a dynamic IP address. It then uses this IP address when a flow is
+initiated. Packets to the MN in this flow are simply forwarded according to the
+forwarding table.
+</t>
+
+<t>
+There may be multiple IP prefixes/addresses that an MN can select when
+initiating a flow. They may be from the same access network or different access
+networks. The network may advertise these prefixes with cost options <xref
+target="I-D.mccann-dmm-prefixcost"/> so that the mobile node may choose the one
+with the least cost. In addition, these IP prefixes/addresses may be of
+different types regarding whether mobility support is needed <xref
+target="I-D.ietf-dmm-ondemand-mobility"/>. A flow will need to choose the
+appropriate one according to whether it needs IP mobility support.
+</t>
+
+
+<!-- Changing to the new IP prefix/address (begin section) -->
+<section anchor="sec:changing-anchor"
+ title="Nomadic case (no need of IP mobility): Changing to new IP prefix/address">
+
+<t>
+When IP mobility support is not needed for a flow, the LM and FM functions are
+not utilized so that the configurations in <xref
+target="sec:distributed-anchoring-configurations"/> are simplified as shown in
+<xref target="fig:change-net" />.
+</t>
+
+<figure anchor="fig:change-net" title="Changing to a new IP address/prefix">
+  <artwork><![CDATA[
+Net1                                                Net2
+
++---------------+                                   +---------------+
+|AR1            |            AR is changed          |AR2            |
++---------------+              ------->             +---------------+
+|CPA:           |                                   |CPA:           |
+|---------------|                                   |---------------|
+|DPA(IPa1):     |                                   |DPA(IPa2):     |
+|anchors IP1    |                                   |anchors IP2    |
++---------------+                                   +---------------+
+
++...............+                                   +---------------+
+.MN(IP1)        .              MN moves             |MN(IP2)        |
+.flow(IP1,...)  .              =======>             |flow(IP2,...)  |
++...............+                                   +---------------+
+  ]]></artwork>
+</figure>
+
+<t>
+When there is no need to provide IP mobility to a flow, the flow may use a new
+IP address acquired from a new network as the MN moves to the new network.
+</t>
+
+<t>
+Regardless of whether IP mobility is needed, if the flow has terminated before
+the MN moves to a new network, the flow may subsequently restart using the new
+IP address assigned from the new network.
+</t>
+
+<t>
+When IP session continuity is needed, even if a flow is ongoing as the MN moves,
+it may still be desirable for the flow to change to using the new IP prefix
+configured in the new network. The flow may then close and then restart using a
+new IP address configured in the new network. Such a change in the IP address of
+the flow may be enabled using a higher layer mobility support which is not in
+the scope of this document.
+</t>
+
+<t>
+In <xref target="fig:change-net" />, a flow initiated while the MN was using the
+IP prefix IP1 anchored to a previous access router AR1 in network Net1 has
+terminated before the MN moves to a new network Net2. After moving to Net2, the
+MN uses the new IP prefix IP2 anchored to a new access router AR2 in network
+Net2 to start a new flow. The packets may then be forwarded without requiring IP
+layer mobility support.
+</t>
+
+<t>An example call flow is outlined in <xref target="fig:change-net-flow" /></t>
+
+<figure anchor="fig:change-net-flow" title="Re-starting a flow with new IP prefix/address">
+  <artwork><![CDATA[
+ MN                    AR1           AR2                           CN
+  |MN attaches to AR1:  |             |                             |
+  |acquire MN-ID and profile          |                             |
+  |--RS---------------->|             |                             |
+  |                     |             |                             |
+  |<----------RA(IP1)---|             |                             |
+  |                     |             |                             |
+Assigned prefix IP1     |             |                             |
+IP1 address configuration             |                             |
+  |                     |             |                             |
+  |<-Flow(IP1,IPcn,...)-+------------------------------------------>|
+  |                     |             |                             |
+  |MN detaches from AR1 |             |                             |
+  |MN attaches to AR2   |             |                             |
+  |                     |             |                             |
+  |--RS------------------------------>|                             |
+  |                     |             |                             |
+  |<--------------RA(IP2)-------------|                             |
+  |                     |             |                             |
+Assigned prefix IP2     |             |                             |
+IP2 address configuration             |                             |
+  |                     |             |                             |
+  |<-new Flow(IP2,IPcn,...)-----------+---------------------------->|
+  |                     |             |                             |
+  ]]></artwork>
+</figure>
+
+</section>
+<!-- Changing to the new IP prefix/address (end section) -->
+
+<!-- Mobility case, traffic redirection (begin section) -->
+<section anchor="sec:traffic_redirection" title="Mobility case, traffic redirection">
+
+<!-- needs to be changed: here we focus on (i) -->
+<t>
+When IP mobility is needed for a flow, the LM and FM functions in <xref
+target="sec:distributed-anchoring-configurations"/> are utilized. There are two
+possible cases: (i) the initial anchor remains the anchor and forwards traffic
+to a new locator in the new network, and (ii) the mobility anchor (data plane
+function) is changed but binds the MN's transferred IP address/prefix. The
+latter enables optimized routes but requires some data plane node that enforces
+rules for traffic indirection. Next, we focus on the first case.
+</t>
+
+<t>
+Mobility support can be provided by using mobility management methods such as
+(<xref target="Paper-Distributed.Mobility"/>, <xref
+target="Paper-Distributed.Mobility.PMIP"/> and <xref
+target="Paper-Distributed.Mobility.Review"/>). After moving, a certain MN's
+traffic flow may continue using the IP prefix from the prior network of
+attachment. Yet some time later, the user application for the flow may be
+closed. If the application is started again, the new flow may not need to use
+the prior network's IP address to avoid having to invoke IP mobility support.
+This may be the case where a dynamic IP prefix/address rather than a permanent
+one is used. The flow may then use the new IP prefix in the network where the
+flow is being initiated. Routing is again kept simpler without employing IP
+mobility and will remain so as long as the MN which is now in the new network
+has not moved again and left to another new network.
+</t>
+
+<t>
+An example call flow in this case is outlined in <xref
+target="fig:flow-continuity" />. In this example, the AR1 plays the role of
+FM-DP entity and redirects the traffic (e.g., using an IP tunnel) to AR2.
+Another solution could be to place an FM-DP entity closer to the CN network to
+perform traffic steering to deviate from default routes (which will bring the
+packet to AR1 per default routing). The LM and FM functions are implemented as
+shown in <xref target="fig:anchor-redirection" />.
+</t>
+
+<figure anchor="fig:anchor-redirection" title="Anchor redirection">
+  <artwork><![CDATA[
+Net1                                                Net2     
+
++---------------+                                   +---------------+
+|AR1            |                                   |AR2            |
++---------------+                                   +---------------+
+|CPA:           |                                   |CPA:           |
+|               |                                   |LM:IP1 at IPa1 |
+|---------------|      IP1 (anchored at Net1)       |---------------|
+|DPA(IPa1):     |      is redirected to Net2        |DPA(IPa2):     |
+|anchors IP1    |              =======>             |anchors IP2    |
++---------------+                                   +---------------+
+
++...............+                                   +---------------+
+.MN(IP1)        .              MN moves             |MN(IP2,IP1)    |
+.flow(IP1,...)  .              =======>             |flow(IP1,...)  |
+.               .                                   |flow(IP2,...)  |
++...............+                                   +---------------+
+  ]]></artwork>
+</figure>
+
+<figure anchor="fig:flow-continuity" title="A flow continues to use the IP prefix from its home network after MN has moved to a new network">
+  <artwork><![CDATA[
+ MN                    AR1           AR2                           CN
+  |MN attaches to AR1:  |             |                             |
+  |acquire MN-ID and profile          |                             |
+  |--RS---------------->|             |                             |
+  |                     |             |                             |
+  |<----------RA(IP1)---|             |                             |
+  |                     |             |                             |
+Assigned prefix IP1     |             |                             |
+IP1 address configuration             |                             |
+  |                     |             |                             |
+  |<-Flow(IP1,IPcn,...)-+------------------------------------------>|
+  |                     |             |                             |
+  |MN detach from AR1   |             |                             |
+  |MN attach to AR2     |             |                             |
+  |                     |             |                             |
+  |--RS------------------------------>|                             |
+IP mobility support such as that described in next sub-section
+  |<--------------RA(IP2,IP1)---------|                             |
+  |                     |             |                             |
+  |                     +<-Flow(IP1,IPcn,...)---------------------->|
+  |                     +<===========>+                             |
+  |<-Flow(IP1,IPcn,...)-------------->+                             |
+  |                     |             |                             |
+Assigned prefix IP2     |             |                             |
+IP2 address configuration             |                             |
+  |                     |             |                             |
+Flow(IP1,IPcn) terminates             |                             |
+  |                     |             |                             |
+  |<-new Flow(IP2,IPcn,...)-----------+---------------------------->|
+  |                     |             |                             |
+  ]]></artwork>
+</figure>
+
+<t>
+Multiple instances of DPAs (at access routers), which are providing IP prefix to
+the MNs, are needed to provide distributed mobility anchoring in an appropriate
+configuration such as those described in <xref target="fig:dmm_net-based" />
+(<xref target="sec:distributed-anchoring-network-based" />) for network-based
+distributed mobility or in <xref target="fig:dmm_client-based" /> (<xref
+target="sec:distributed-anchoring-host-based" />) for client-based distributed
+mobility.
+</t>
+
+</section>
+<!-- Mobility case, traffic redirection (end section) -->
+
+<!-- Mobility case, anchor relocation (begin section) -->
+<section anchor="sec:anchor_relocation" title="Mobility case, anchor relocation">
+
+<t>
+We focus next on the case where the mobility anchor (data plane function) is
+changed but binds the MN's transferred IP address/prefix. This enables optimized
+routes but requires some data plane node that enforces rules for traffic
+indirection.
+</t>
+
+<t>
+IP mobility is invoked to enable IP session continuity for an ongoing flow as
+the MN moves to a new network. Here the anchoring of the IP address of the flow
+is in the home network of the flow, which is not in the current network of
+attachment. A centralized mobility management mechanism may employ indirection
+from the anchor in the home network to the current network of attachment. Yet it
+may be difficult to avoid unnecessarily long route when the route between the MN
+and the CN via the anchor in the home network is significantly longer than the
+direct route between them. An alternative is to switch the IP prefix/address
+anchoring to the new network.
+</t>
+
+<t>
+The IP prefix/address anchoring may move 
+without changing the IP prefix/address of the flow.
+Here the LM and FM functions in <xref target="fig:dmm_net-based" /> in 
+<xref target="sec:distributed-anchoring-configurations"/>
+are implemented as shown in <xref target="fig:anchor-mobility" />.
+</t>
+
+<figure anchor="fig:anchor-mobility" title="Anchor mobility">
+  <artwork><![CDATA[
+Net1                                                Net2     
+
++---------------+                                   +---------------+
+|AR1            |                                   |AR2            |
++---------------+                                   +---------------+
+
+|CPA:           |                                   |CPA:           |
+
+|LM:IP1 at IPa1 |                                   |LM:IP1 at IPa2 |
+|   changes to  |                                   |               |
+|   IP1 at IPa2 |                                   |               |
+|---------------|                                   |---------------|
+|DPA(IPa1):     | IP1 anchoring is effectively moved|DPA(IPa2):     |
+|anchored IP1   |              =======>             |anchors IP2,IP1|
++---------------+                                   +---------------+
+
++...............+                                   +---------------+
+.MN(IP1)        .              MN moves             |MN(IP2,IP1)    |
+.flow(IP1,...)  .              =======>             |flow(IP1,...)  |
++...............+                                   +---------------+
+  ]]></artwork>
+</figure>
+
+<t>
+As an MN with an ongoing session moves to a new network, the flow may preserve
+IP session continuity by moving the anchoring of the original IP prefix/address
+of the flow to the new network. 
+</t>
+
+<t>
+One way to accomplish such move is to use a centralized routing protocol, but
+note that this solution presents some scalability concerns and its applicability
+is typically limited to small networks.
+</t>
+
+</section>
+<!-- Mobility case, anchor relocation (end section) -->
+
+</section>
+<!-- IP mobility support only when needed (end section) -->
+
+<section anchor="security" title="Security Considerations">
+
+<t>
+Security protocols and mechanisms are employed to secure the network and to make
+continuous security improvements, and a DMM solution is required to support them
+<xref target="RFC7333"/>.
+</t>
+
+<t>
+In a DMM deployment <xref target="I-D.ietf-dmm-deployment-models"/> various
+attacks such as impersonation, denial of service, man-in-the-middle attacks need
+to be prevented. 
+</t>
+
+</section>
+
+<section title="IANA Considerations">
+
+<t>
+This document presents no IANA considerations.
+</t>
+
+</section>
+
+<section title="Contributors">
+
+<t>
+Alexandre Petrescu and Fred L. Templin had contributed to earlier versions of
+this document regarding distributed anchoring for hierarchical network and for
+network mobility, although these extensions were removed to keep the document
+within reasonable length.
+</t>
+
+<t>
+This document has benefited from other work on mobility support in SDN network,
+on providing mobility support only when needed, and on mobility support in
+enterprise network. These works have been referenced. While some of these
+authors have taken the work to jointly write this document, others have
+contributed at least indirectly by writing these drafts. The latter include
+Philippe Bertin, Dapeng Liu, Satoru Matushima, Pierrick Seite, Jouni Korhonen,
+and Sri Gundavelli.
+</t>
+
+<t>
+Valuable comments have been received from John Kaippallimalil, ChunShan Xiong,
+and Dapeng Liu. Dirk von Hugo, Byju Pularikkal, Pierrick Seite
+have generously provided careful review with helpful corrections and
+suggestions. Marco Liebsch also performed a very detailed and helpful review of
+this document.
+</t>
+
+</section>
+
+</middle>
+
+<back>
+<references title="Normative References">
+<?rfc include="reference.RFC.3753.xml" ?>
+<?rfc include="reference.RFC.5213.xml" ?>
+<?rfc include="reference.RFC.6275.xml" ?>
+<?rfc include="reference.RFC.6459.xml" ?>
+<?rfc include="reference.RFC.7333.xml" ?>
+<?rfc include="reference.RFC.7429.xml" ?>
+
+<?rfc include="reference.I-D.ietf-dmm-ondemand-mobility.xml"?>
+<?rfc include="reference.I-D.ietf-dmm-fpc-cpdp.xml"?>
+<?rfc include="reference.I-D.ietf-dmm-deployment-models.xml"?>
+<?rfc include="reference.I-D.mccann-dmm-prefixcost.xml"?>
+
+<?rfc include="reference.I-D.matsushima-stateless-uplane-vepc.xml"?>
+<?rfc include="reference.I-D.seite-dmm-dma.xml"?>
+<?rfc include="reference.I-D.bernardos-dmm-pmipv6-dlif.xml"?>
+<?rfc include="reference.I-D.sarikaya-dmm-for-wifi.xml"?>
+<?rfc include="reference.I-D.yhkim-dmm-enhanced-anchoring.xml"?>
+
+</references>
+
+<references title="Informative References">
+<reference anchor="Paper-Distributed.Mobility.Review">
+        <front>
+          <title>Distributed and Dynamic Mobility Management in Mobile
+          Internet: Current Approaches and Issues</title>
+
+          <author initials="H" surname="Chan">
+            <organization/>
+          </author>
+
+          <author initials="H" surname="Yokota">
+            <organization/>
+          </author>
+
+          <author initials="J" surname="Xie">
+            <organization/>
+          </author>
+
+          <author initials="P" surname="Seite">
+            <organization/>
+          </author>
+
+          <author initials="D" surname="Liu">
+            <organization/>
+          </author>
+
+          <date month="February" year="2011"/>
+        </front>
+</reference>
+
+<reference anchor="Paper-Distributed.Mobility">
+        <front>
+          <title>Distributed IP Mobility Management from the Perspective of
+          the IETF: Motivations, Requirements, Approaches, Comparison, and
+          Challenges</title>
+
+          <author initials="J" surname="Lee">
+            <organization/>
+          </author>
+
+          <author initials="J" surname="Bonnin">
+            <organization/>
+          </author>
+
+          <author initials="P" surname="Seite">
+            <organization/>
+          </author>
+
+          <author initials="H" surname="Chan">
+            <organization/>
+          </author>
+
+          <date month="October" year="2013"/>
+        </front>
+
+        <seriesInfo name="" value="IEEE Wireless Communications"/>
+</reference>
+
+<reference anchor="Paper-Distributed.Mobility.PMIP">
+        <front>
+          <title>Proxy Mobile IP with Distributed Mobility Anchors</title>
+
+          <author initials="H" surname="Chan">
+            <organization/>
+          </author>
+
+          <date month="December" year="2010"/>
+        </front>
+
+        <seriesInfo name=""
+                    value="Proceedings of GlobeCom Workshop on Seamless Wireless Mobility"/>
+      </reference>
+</references>
+</back>
+
+</rfc>

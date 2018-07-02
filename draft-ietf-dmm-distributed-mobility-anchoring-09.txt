@@ -702,7 +702,8 @@ Internet-Draft       distributed mobility anchoring            July 2018
    Valuable comments have been received from John Kaippallimalil,
    ChunShan Xiong, and Dapeng Liu. Dirk von Hugo, Byju Pularikkal,
    Pierrick Seite have generously provided careful review with helpful
-   corrections and suggestions.
+   corrections and suggestions.  Marco Liebsch also performed a very
+   detailed and helpful review of this document.
 
 9.  References
 
@@ -718,7 +719,6 @@ Internet-Draft       distributed mobility anchoring            July 2018
               Gundavelli, S. and S. Jeon, "DMM Deployment Models and
               Architectural Considerations", draft-ietf-dmm-deployment-
               models-04 (work in progress), May 2018.
-
 
 
 
